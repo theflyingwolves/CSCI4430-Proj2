@@ -87,9 +87,6 @@ int main(int argc, char **argv) {
 
 	//Start to process the packet we receive.
 	while ( (res = recv(fd, buf , sizeof(buf), 0))  && res>=0 ) {
-		
-		printf("\n\n\n*******NEW ONE*******\n");
-		fprintf(stdout,"in the loop\n");
 		nfq_handle_packet(nfqHandle, buf , res);
 	}
 	//End the process
@@ -109,41 +106,20 @@ int main(int argc, char **argv) {
 static int Callback123(nfq_q_handle* myQueue, struct nfgenmsg* msg, nfq_data* pkt, void *cbData) {
 	unsigned int id=0;
 	nfqnl_msg_packet_hdr *header;
-	double currentTime=0;
+    	double currentTime=0;
 	
-	fprintf(stdout,"enter the callback\n");	
-  
-  fprintf(stdout,"***********ALL entry in UDP table\n");
-  printAllUdp(&udpHead);
-  fprintf(stdout,"\n**********All entry in tCP table\n");
-  printAllTcp(&tcpHead);
-  fprintf(stdout,"\n*****end***************\n\n");
+	time_t now;
+    	now=time(0);
+    	currentTime=(double)now;
 
 
-	//get time
-//	struct timeval tv;
-//	if (!nfq_get_timestamp(pkt,&tv) ) {
-//		double currentTime = tv.tv_sec + (double) tv.tv_usec / 1000000;
-//		printf(" Timestamp: %lf\n",currentTime);
-//	}
-//	else {
-//		printf(" Timestamp: nil\n");
-//	}
-	
-  time_t now;
-  now=time(0);
-  currentTime=(double)now;
-
-
-		printf("pkt recvd: ");
-		if ( (header = nfq_get_msg_packet_hdr(pkt) )) {
-			id = ntohl(header->packet_id);
-			printf("  id: %u\n", id);
-			printf("  hw_protocol: %u\n", ntohs(header->hw_protocol));		
-			printf("  hook: %u\n", header->hook);
-		}
 		
 
+
+    if ( (header = nfq_get_msg_packet_hdr(pkt) )) {
+        id = ntohl(header->packet_id);
+    }
+		
 	unsigned char *pktData;
 	int len=nfq_get_payload(pkt, (char**)&pktData);
 
@@ -157,18 +133,24 @@ static int Callback123(nfq_q_handle* myQueue, struct nfgenmsg* msg, nfq_data* pk
 	switch(ip_hdr->ip_p) {
 		case IPPROTO_TCP:
 		{
-//			struct tcphdr* tcp_hdr = (struct tcphdr*) ( (unsigned char*)pktData + (ip_hdr->ip_hl << 2) );
-			
+
+	printf("\n\n======================== New  TCP Packet ==========================\n");
 			int processResult = processTcp(&tcpHead,ip_hdr);
 			
+	printf("TCP Table Entries:\n{\n");	
+	printAllTcp(&tcpHead);
+	printf("}\n");
 			if ( processResult==1 ) {
+        fprintf(stdout,"TCP Packet Accepted!\n");
+	
 				return nfq_set_verdict(myQueue, id, NF_ACCEPT, len, pktData);
 			}
 			else if ( processResult==0 ) {
+        fprintf(stdout,"TCP Packet Dropped!\n");
 				return nfq_set_verdict(myQueue, id, NF_DROP, 0, NULL);
 			}
 			else {
-				fprintf(stderr,"The processUdp gives a wrong number, don't know whether to drop or accept\n");
+        fprintf(stdout,"TCP Packet Dropped!\n");
 				return nfq_set_verdict(myQueue, id, NF_DROP, 0, NULL);
 			}
 			break;
@@ -176,23 +158,28 @@ static int Callback123(nfq_q_handle* myQueue, struct nfgenmsg* msg, nfq_data* pk
 		
 		case IPPROTO_UDP:
 		{
-		//	struct udphdr* udp_hdr = (struct udphdr*) ( (unsigned char*)pktData + (ip_hdr->ip_hl << 2) );
+
+	printf("\n\n======================== New UDP Packet ==========================\n");
 			/*
 				UDP part
 			*/
-
 			int processResult = processUdp(&udpHead,ip_hdr,currentTime);
+			
+	printf("UDP Table Entries:\n{\n");	
+	printAllUdp(&udpHead);
+	printf("}\n");
 			if ( processResult==1 ) {
-				printf("Packet Source: %u\n",ntohl(ip_hdr->ip_src.s_addr));
-				fprintf(stdout,"Packet Accepted. \n");
+                // Packet Accepted
+				fprintf(stdout,"UDP Packet Accepted! \n");
 				return nfq_set_verdict(myQueue, id, NF_ACCEPT, len, pktData);
 			}
 			else if ( processResult ==0 ) {
-				fprintf(stdout,"Packet Dropped. \n");
+                // Packet Dropped
+				fprintf(stdout,"UDP Packet Dropped! \n");
 				return nfq_set_verdict(myQueue, id, NF_DROP, 0, NULL);
 			}
 			else {
-				fprintf(stderr,"The processUdp gives a wrong number, don't know whether to drop or accept\n");
+        fprintf(stdout,"UDP Packet Dropped! \n");
 				return nfq_set_verdict(myQueue, id, NF_DROP, 0, NULL);
 			}
 			break;

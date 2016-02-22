@@ -25,9 +25,6 @@ extern "C" {
 #include "tcpudp.h"
 #include "checksum.h"
 
-
-
-
 #define MIN_PORT 10000	// the port used by VM A for translation should be >= 10000 and <= 12000 
 #define MAX_PORT 12000
 #define UDP_TIME 30     // a udp entry can only last 30 seconds if it hasn't beed used in this 30 seconds.
@@ -36,9 +33,7 @@ extern "C" {
 extern uint32_t publicIP;    // the ip address used by VM A to communicate with external networks
 extern uint32_t internalIP;  // the internal network ip address
 extern uint32_t subnetIP;	  // the subnet network ip address
-//extern int debug;
-//tcpEntry tcpHead;
-//udpEntry udpHead;
+
 extern unsigned int mask;
 
 
@@ -47,7 +42,7 @@ int  processUdp(udpEntry *table, struct ip* packet, double currentTime);
 int getDirection(struct ip* packet, uint32_t Aip);
 int insertEntry(udpEntry *table, struct ip* packet, double currentTime);
 int insertTcpEntry(tcpEntry *table, struct ip* packet);
-int getAvailableTransport();
+int getAvailableTransport(double currentTime);
 
 
 #endif
